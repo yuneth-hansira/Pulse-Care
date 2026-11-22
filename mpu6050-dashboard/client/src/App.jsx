@@ -7,16 +7,19 @@
  *   1. StatusBar   — header + connection status + stale-data warning
  *   2. Controls    — pause, clear, window size, CSV download
  *   3. StatCards   — 7 numeric value cards
- *   4. Charts row  — Accelerometer | Gyroscope | Temperature charts
- *   5. Bottom row  — TiltIndicator + Tilt legend
+ *   4. Medical Vitals — Real-time ECG waveform + SpO2/HR Card (New)
+ *   5. Charts row  — Accelerometer | Gyroscope | Temperature charts
+ *   6. Bottom row  — TiltIndicator + Tilt legend
  */
 
 import { useSensorSocket } from './hooks/useSensorSocket';
-import StatusBar     from './components/StatusBar';
-import StatCards     from './components/StatCards';
-import LiveChart     from './components/LiveChart';
+import StatusBar from './components/StatusBar';
+import StatCards from './components/StatCards';
+import LiveChart from './components/LiveChart';
 import TiltIndicator from './components/TiltIndicator';
-import Controls      from './components/Controls';
+import Controls from './components/Controls';
+import ECGChart from './components/ECGChart';
+import SpO2Card from './components/SpO2Card'; // <-- Added SpO2 Component
 
 // ── Chart axis definitions ────────────────────────────────────────────────────
 const ACCEL_LINES = [
@@ -39,6 +42,9 @@ export default function App() {
   const {
     data,
     latest,
+    ecgData,
+    ecgStatus,
+    maxData,         // <-- Extracted SpO2 data from the updated hook
     connected,
     serialConnected,
     mock,
@@ -71,10 +77,22 @@ export default function App() {
         data={data}
       />
 
-      {/* ── 3. Stat cards ────────────────────────────────────────────── */}
+      {/* ── 3. Stat cards (MPU6050 data) ─────────────────────────────── */}
       <StatCards latest={latest} />
 
-      {/* ── 4. Charts ────────────────────────────────────────────────── */}
+      {/* ── 4. Medical Vitals Row (ECG + SpO2) ───────────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+        {/* ECG Chart takes up 2/3 of the row on large screens */}
+        <div className="xl:col-span-2">
+          <ECGChart data={ecgData} status={ecgStatus} />
+        </div>
+        {/* SpO2 Card takes up 1/3 of the row */}
+        <div className="xl:col-span-1">
+          <SpO2Card maxData={maxData} />
+        </div>
+      </div>
+
+      {/* ── 5. MPU6050 Charts ────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Accelerometer */}
         <LiveChart
@@ -110,7 +128,7 @@ export default function App() {
         />
       </div>
 
-      {/* ── 5. Bottom row: Tilt indicator + info card ─────────────────── */}
+      {/* ── 6. Bottom row: Tilt indicator + info card ─────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {/* Tilt 3-D box */}
         <TiltIndicator latest={latest} />
@@ -144,7 +162,7 @@ export default function App() {
           {/* Data format */}
           <div className="mt-5 p-3 rounded-lg bg-surface-800 border border-white/5">
             <p className="text-xs text-gray-500 mb-1.5 font-semibold uppercase tracking-wide">
-              Expected JSON (115200 baud)
+              Expected JSON (MQTT Wireless)
             </p>
             <code className="text-xs font-mono text-green-400 break-all">
               {`{"ax":-0.103,"ay":-0.551,"az":-0.743,"gx":-11.25,"gy":0.64,"gz":0.46,"temp":30.9}`}
@@ -155,7 +173,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="text-center text-xs text-gray-600 mt-2 pb-2">
-        MPU6050 Dashboard · ESP32 → USB Serial → Node.js → React
+        Pulse-Care Dashboard · ESP32 → Mosquitto MQTT (Docker) → React
       </footer>
     </div>
   );
